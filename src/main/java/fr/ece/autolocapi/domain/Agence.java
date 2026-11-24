@@ -1,8 +1,11 @@
 package fr.ece.autolocapi.domain;
+
 import jakarta.persistence.*;
-import lombok.*;
-import java.math.BigDecimal;
-import java.time.LocalDate;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 @Entity
 @Table(name = "agence")
 @Getter
@@ -10,10 +13,20 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Agence {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long idAgence;
-    @Column(nullable = false, length = 100) private String nom;
-    @Column(nullable = false, length = 50)  private String ville;
-    private String adresse;
-    @Column(length = 20) private String telephone;
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long idAgence;
+
+    @Column(nullable = false, length = 100)
+    private String nom;
+
+    @Column(nullable = false, length = 80)
+    private String ville;
+
+    @Column(nullable = false, length = 150)
+    private String adresse;
+
+    @Column(nullable = false, length = 30)
+    private String telephone;
 }
