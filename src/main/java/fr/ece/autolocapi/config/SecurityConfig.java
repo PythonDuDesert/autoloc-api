@@ -13,20 +13,16 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 public class SecurityConfig {
-
     @Bean
     public UserDetailsService userDetailsService(PasswordEncoder encoder) {
-
         UserDetails user = User.withUsername("student")
                 .password(encoder.encode("student123"))
                 .roles("USER")
                 .build();
-
         UserDetails admin = User.withUsername("admin")
                 .password(encoder.encode("admin123"))
                 .roles("ADMIN")
                 .build();
-
         return new InMemoryUserDetailsManager(user, admin);
     }
 
@@ -38,14 +34,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http)
             throws Exception {
-
         http.authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/public/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/**").hasAnyRole("USER", "ADMIN")
                 .anyRequest().authenticated()
         ).httpBasic(basic -> {});
-
         return http.build();
     }
 }
