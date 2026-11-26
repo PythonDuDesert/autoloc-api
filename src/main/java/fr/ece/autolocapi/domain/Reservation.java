@@ -37,6 +37,7 @@ public class Reservation {
     private Vehicule vehicule;
 
     @OneToOne(
+            mappedBy = "reservation",
             cascade = CascadeType.ALL,
             fetch = FetchType.LAZY
     )
