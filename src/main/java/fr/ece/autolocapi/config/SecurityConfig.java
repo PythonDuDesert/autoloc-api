@@ -2,29 +2,15 @@ package fr.ece.autolocapi.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 
 @Configuration
 public class SecurityConfig {
-    @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder encoder) {
-        UserDetails user = User.withUsername("student")
-                .password(encoder.encode("student123"))
-                .roles("USER")
-                .build();
-        UserDetails admin = User.withUsername("admin")
-                .password(encoder.encode("admin123"))
-                .roles("ADMIN")
-                .build();
-        return new InMemoryUserDetailsManager(user, admin);
-    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -33,15 +19,32 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http)
-            throws Exception {
-        http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/actuator/health", "/actuator/prometheus").permitAll()   // ← new line
-                .requestMatchers("/api/public/**").permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/**").hasAnyRole("USER", "ADMIN")
-                .anyRequest().authenticated()
-        ).httpBasic(basic -> {});
+            throws Exception {http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(auth -> auth
+                        // Frontend
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**",
+                                "/static/**",
+                                "/favicon.ico"
+                        ).permitAll()
+                        // Actuator
+                        .requestMatchers(
+                                "/actuator/health",
+                                "/actuator/prometheus"
+                        ).permitAll()
+                        // Authentification publique
+                        .requestMatchers("/api/public/**").permitAll()
+                        // Administration
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // API authentifiée
+                        .requestMatchers("/api/**").hasAnyRole("USER", "ADMIN")
+                        .anyRequest().authenticated()
+                )
+                .httpBasic(basic -> basic.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
+
         return http.build();
     }
-
 }
