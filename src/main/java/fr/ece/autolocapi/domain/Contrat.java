@@ -1,7 +1,6 @@
 package fr.ece.autolocapi.domain;
 
 import jakarta.persistence.*;
-import java.util.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -9,6 +8,8 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "contrat")
@@ -30,10 +31,17 @@ public class Contrat {
 
     @Column(nullable = false)
     private Boolean valide;
-    @OneToMany(mappedBy = "contrat", fetch = FetchType.LAZY)
+
+    @OneToMany(
+            mappedBy = "contrat",
+            cascade = CascadeType.ALL,
+            fetch = FetchType.LAZY
+    )
     private List<Paiement> paiements = new ArrayList<>();
 
-    @OneToMany(mappedBy = "contrat", cascade = CascadeType.ALL,
-            fetch = FetchType.LAZY)
-    private List<Paiement> payments = new ArrayList<>();
+    @OneToOne(
+            mappedBy = "contrat",
+            fetch = FetchType.LAZY
+    )
+    private Reservation reservation;
 }

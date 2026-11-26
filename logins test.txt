@@ -1,0 +1,11 @@
+GET http://localhost:8080/api/hello
+Username: student
+Password: student123
+
+GET http://localhost:8080/api/admin/report
+student
+student123
+
+GET http://localhost:8080/api/admin/report
+Username: admin
+Password: admin123
