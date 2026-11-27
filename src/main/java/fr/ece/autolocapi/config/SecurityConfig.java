@@ -48,7 +48,8 @@ public class SecurityConfig {
                                 "/api/agences/**",
                                 "/api/contrats/**",
                                 "/api/paiements/**",
-                                "/api/maintenances/**"
+                                "/api/maintenances/**",
+                                "/api/reservations/**"
                         ).hasRole("ADMIN")
                         // Catalogue véhicules : lecture pour tous, écriture ADMIN
                         .requestMatchers(HttpMethod.POST, "/api/vehicules/**", "/api/equipements/**").hasRole("ADMIN")

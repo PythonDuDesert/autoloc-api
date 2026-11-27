@@ -36,6 +36,10 @@ public class Reservation {
     @ManyToOne(fetch = FetchType.LAZY)
     private Vehicule vehicule;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_utilisateur")
+    private Utilisateur utilisateur;
+
     @OneToOne(
             mappedBy = "reservation",
             cascade = CascadeType.ALL,
