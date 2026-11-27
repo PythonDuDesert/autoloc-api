@@ -334,7 +334,7 @@ const App = {
         <div>
           <h2>Véhicules</h2>
           <p class="muted">
-            Consultez les véhicules réellement retournés par l'API.
+            Consultez les véhicules.
           </p>
         </div>
       </div>
