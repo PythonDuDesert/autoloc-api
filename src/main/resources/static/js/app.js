@@ -1,8 +1,8 @@
 import { Api } from "./api.js";
-
 const resources = {
   vehicles: { label: "Véhicules", path: "/api/vehicules", admin: false },
-  reservations: { label: "Réservations", path: "/api/reservations", admin: false },
+  myReservations: { label: "Mes réservations", path: "/api/mes-reservations", admin: false },
+  reservations: { label: "Réservations", path: "/api/reservations", admin: true },
   clients: { label: "Clients", path: "/api/clients", admin: true },
   agencies: { label: "Agences", path: "/api/agences", admin: true },
   contracts: { label: "Contrats", path: "/api/contrats", admin: true },
@@ -15,14 +15,13 @@ const App = {
   page: "home",
 
   async init() {
-    const saved = sessionStorage.getItem("autoloc_user");
+    window.addEventListener("autoloc:logout", () => {
+      Api.clear();
+      this.login("Session expirée : reconnectez-vous.");
+    });
 
-    if (saved) {
-      Api.user = JSON.parse(saved);
-      this.renderShell();
-      return;
-    }
-
+    // The password is never stored: after a reload, you have to log in again.
+    sessionStorage.removeItem("autoloc_user");
     this.login();
   },
 
@@ -261,6 +260,7 @@ const App = {
 
     if (page === "home") return this.home(element);
     if (page === "vehicles") return this.vehicles(element);
+    if (page === "myReservations") return this.myReservations(element);
 
     return this.listResource(element, page);
   },
@@ -393,7 +393,7 @@ const App = {
 
     element.innerHTML = list.map((vehicle) => `
       <article class="card vehicle-card">
-        <div class="vehicle-top">🚗</div>
+        <div class="vehicle-top">🚗${this.vehicleImg(vehicle)}</div>
         <h3>${vehicle.marque || "Véhicule"} ${vehicle.modele || ""}</h3>
 
         <div class="vehicle-meta">
@@ -442,7 +442,7 @@ const App = {
 
       <div class="detail">
         <div class="card detail-main">
-          <div class="car">🚗</div>
+           <div class="car">🚗${this.vehicleImg(vehicle)}</div>
 
           <div class="detail-list">
             ${this.detailItem("Immatriculation", vehicle.immatriculation)}
@@ -473,14 +473,156 @@ const App = {
 
         <div class="card">
           <h3>Réserver ce véhicule</h3>
-          <p class="muted">
-            La réservation sera disponible dès qu'un endpoint REST
-            correspondant sera exposé par le backend.
-          </p>
-          <button class="btn primary" disabled>Réserver</button>
+          ${vehicle.statut === "MAINTENANCE"
+            ? `<div class="alert error">Ce véhicule est en maintenance.</div>`
+            : `
+          <form id="reserveForm">
+            <div class="field">
+              <label for="dateDebut">Du</label>
+              <input id="dateDebut" type="date" min="${this.today()}" required>
+            </div>
+            <div class="field">
+              <label for="dateFin">Au</label>
+              <input id="dateFin" type="date" min="${this.today()}" required>
+            </div>
+            <p class="muted" id="reservePrice">Choisissez vos dates.</p>
+            <div id="reserveMessage"></div>
+            <button class="btn primary full" id="reserveBtn">Réserver</button>
+          </form>`}
         </div>
       </div>
     `;
+
+    this.bindReserveForm(vehicle);
+  },
+
+  vehicleImg(vehicle) {
+    const slug = `${vehicle.marque || ""}-${vehicle.modele || ""}`
+        .toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+    return `<img src="/images/vehicules/${slug}.jpg"
+                 alt="${vehicle.marque || ""} ${vehicle.modele || ""}"
+                 loading="lazy" onerror="this.remove()">`;
+  },
+  today() {
+    return new Date().toLocaleDateString("sv-SE"); // AAAA-MM-JJ, date locale
+  },
+
+  frDate(iso) {
+    return iso ? iso.split("-").reverse().join("/") : "—";
+  },
+
+  statutLabel(statut) {
+    return {
+      En_ATTENTE: "En attente", EN_ATTENTE: "En attente",
+      CONFIRMEE: "Confirmée", ANNULEE: "Annulée", TERMINEE: "Terminée",
+    }[statut] || statut;
+  },
+
+  canCancel(r) {
+    return ["En_ATTENTE", "EN_ATTENTE", "CONFIRMEE"].includes(r.statut) && this.today() < r.dateDebut;
+  },
+
+  bindReserveForm(vehicle) {
+    const form = document.getElementById("reserveForm");
+    if (!form) return;
+
+    const debut = document.getElementById("dateDebut");
+    const fin = document.getElementById("dateFin");
+    const price = document.getElementById("reservePrice");
+    const message = document.getElementById("reserveMessage");
+
+    const update = () => {
+      if (debut.value) fin.min = debut.value;
+      if (!debut.value || !fin.value || fin.value < debut.value) {
+        price.textContent = "Choisissez vos dates.";
+        return;
+      }
+      const jours = (new Date(fin.value) - new Date(debut.value)) / 86400000 + 1;
+      const total = (jours * Number(vehicle.tarifJournalier || 0)).toFixed(2);
+      price.textContent = `${jours} jour(s) · total estimé ${total} €`;
+    };
+    debut.onchange = update;
+    fin.onchange = update;
+
+    form.onsubmit = async (event) => {
+      event.preventDefault();
+      const button = document.getElementById("reserveBtn");
+      button.disabled = true;
+      message.innerHTML = "";
+      try {
+        await Api.request("/api/mes-reservations", {
+          method: "POST",
+          body: { idVehicule: vehicle.idVehicule, dateDebut: debut.value, dateFin: fin.value },
+        });
+        this.go("myReservations");
+      } catch (error) {
+        button.disabled = false;
+        message.innerHTML = `<div class="alert error">${error.message}</div>`;
+      }
+    };
+  },
+
+  async myReservations(element) {
+    element.innerHTML = `
+      <div class="section-head">
+        <div>
+          <h2>Mes réservations</h2>
+          <p class="muted">Une seule réservation en cours à la fois. Annulation possible jusqu'à la veille du début.</p>
+        </div>
+        <button class="btn primary" onclick="App.go('vehicles')">Réserver un véhicule</button>
+      </div>
+      <div id="myList"><div class="loading">Chargement…</div></div>
+    `;
+
+    const list = document.getElementById("myList");
+    try {
+      const data = (await Api.request("/api/mes-reservations")) || [];
+      if (!data.length) {
+        list.innerHTML = `<div class="card empty">Aucune réservation pour le moment.</div>`;
+        return;
+      }
+
+      list.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Véhicule</th><th>Du</th><th>Au</th><th>Statut</th><th></th></tr></thead>
+            <tbody>
+              ${data.map((r) => `
+                <tr>
+                  <td>${r.vehicule?.marque || ""} ${r.vehicule?.modele || ""}
+                      <span class="muted small">${r.vehicule?.immatriculation || ""}</span></td>
+                  <td>${this.frDate(r.dateDebut)}</td>
+                  <td>${this.frDate(r.dateFin)}</td>
+                  <td><span class="badge ${
+                    r.statut === "ANNULEE" ? "danger" : r.statut === "CONFIRMEE" ? "ok" : r.statut === "TERMINEE" ? "" : "warn"
+                  }">${this.statutLabel(r.statut)}</span></td>
+                  <td>${this.canCancel(r)
+                    ? `<button class="btn secondary" data-cancel="${r.idReservation}">Annuler</button>`
+                    : ""}</td>
+                </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>`;
+
+      list.querySelectorAll("[data-cancel]").forEach((button) => {
+        button.onclick = async () => {
+          if (!confirm("Annuler cette réservation ?")) return;
+          button.disabled = true;
+          try {
+            await Api.request(`/api/mes-reservations/${button.dataset.cancel}/annuler`, { method: "PATCH" });
+            this.myReservations(element);
+          } catch (error) {
+            button.disabled = false;
+            alert(error.message);
+          }
+        };
+      });
+    } catch (error) {
+      this.endpointUnavailable(list, error, "/api/mes-reservations");
+    }
   },
 
   detailItem(key, value) {
@@ -575,18 +717,15 @@ const App = {
   },
 
   endpointUnavailable(element, error, path) {
+    const notFound = error.status === 404;
     element.innerHTML = `
       <div class="card">
-        <div class="alert warn">
-          <strong>Fonctionnalité en attente du backend</strong>
-          <p>
-            Le frontend n'invente aucune route.
-            L'endpoint <code>${path}</code> n'est pas encore exposé
-            par l'API actuelle.
-          </p>
-          <p class="small">
-            HTTP ${error.status || "?"} — ${error.message}
-          </p>
+        <div class="alert ${notFound ? "warn" : "error"}">
+          <strong>${notFound ? "Fonctionnalité en attente du backend" : "Erreur lors du chargement"}</strong>
+          <p>${notFound
+            ? `L'endpoint <code>${path}</code> n'est pas encore exposé par l'API.`
+            : `Impossible de charger <code>${path}</code>.`}</p>
+          <p class="small">HTTP ${error.status || "?"} — ${error.message}</p>
         </div>
       </div>
     `;

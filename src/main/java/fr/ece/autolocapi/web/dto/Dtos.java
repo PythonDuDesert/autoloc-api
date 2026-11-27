@@ -100,16 +100,24 @@ public final class Dtos {
 
     // ------------------------------------------------------------- Reservation
     public record ReservationDto(Long idReservation, LocalDate dateDebut, LocalDate dateFin,
-                                 StatutReservation statut, ClientRef client, VehiculeRef vehicule, Long idContrat) {
+                                 StatutReservation statut, ClientRef client, VehiculeRef vehicule, Long idContrat,
+                                 String utilisateur) {
         public static ReservationDto from(Reservation r) {
             return new ReservationDto(r.getIdReservation(), r.getDateDebut(), r.getDateFin(), r.getStatut(),
                     ClientRef.from(r.getClient()), VehiculeRef.from(r.getVehicule()),
-                    r.getContrat() == null ? null : r.getContrat().getIdContrat());
+                    r.getContrat() == null ? null : r.getContrat().getIdContrat(),
+                    r.getUtilisateur() == null ? null : r.getUtilisateur().getUsername());
         }
     }
 
     public record ReservationRequest(
             @NotNull Long idClient,
+            @NotNull Long idVehicule,
+            @NotNull LocalDate dateDebut,
+            @NotNull LocalDate dateFin) {}
+
+    /** Réservation par l'utilisateur connecté : le compte vient de l'authentification, jamais du corps. */
+    public record MaReservationRequest(
             @NotNull Long idVehicule,
             @NotNull LocalDate dateDebut,
             @NotNull LocalDate dateFin) {}

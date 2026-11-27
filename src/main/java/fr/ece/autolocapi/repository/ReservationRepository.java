@@ -34,4 +34,13 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
                        @Param("excludeId") Long excludeId,
                        @Param("debut") LocalDate debut,
                        @Param("fin") LocalDate fin);
+    @EntityGraph(attributePaths = {"vehicule", "client", "utilisateur"})
+    List<Reservation> findByUtilisateurUsernameOrderByDateDebutDesc(String username);
+
+    @EntityGraph(attributePaths = {"vehicule", "client", "utilisateur"})
+    Optional<Reservation> findByIdReservationAndUtilisateurUsername(Long idReservation, String username);
+
+    /** Does the user already have an active reservation that isn't finished yet? */
+    boolean existsByUtilisateurUsernameAndStatutInAndDateFinGreaterThanEqual(
+            String username, Collection<StatutReservation> statuts, LocalDate date);
 }

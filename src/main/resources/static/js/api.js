@@ -55,6 +55,7 @@ const Api = {
     }
 
     if (response.status === 401) {
+      if (this.user) window.dispatchEvent(new Event("autoloc:logout"));
       throw new ApiError(401, "Authentification requise.");
     }
 
