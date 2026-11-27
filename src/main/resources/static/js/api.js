@@ -1,31 +1,28 @@
+const AUTH_KEY = "autoloc_auth";
+
 const Api = {
-  credentials: null,
+  // Jeton HTTP Basic conservé dans sessionStorage : propre à l'onglet, effacé à sa fermeture
+  // ou au clic sur « Quitter ». Sans cela, un simple rechargement de la page perdait la connexion.
+  token: sessionStorage.getItem(AUTH_KEY),
   user: null,
 
   setCredentials(username, password) {
-    this.credentials = { username, password };
+    this.token = btoa(
+      unescape(encodeURIComponent(username + ":" + password))
+    );
+    sessionStorage.setItem(AUTH_KEY, this.token);
   },
 
   clear() {
-    this.credentials = null;
+    this.token = null;
     this.user = null;
+    sessionStorage.removeItem(AUTH_KEY);
     sessionStorage.removeItem("autoloc_user");
   },
 
   authHeader() {
-    if (!this.credentials) return {};
-
-    return {
-      Authorization:
-        "Basic " +
-        btoa(
-          unescape(
-            encodeURIComponent(
-              this.credentials.username + ":" + this.credentials.password
-            )
-          )
-        ),
-    };
+    if (!this.token) return {};
+    return { Authorization: "Basic " + this.token };
   },
 
   async request(path, options = {}) {

@@ -109,7 +109,7 @@ public final class Dtos {
     }
 
     public record ReservationRequest(
-            @NotNull Long idClient,
+            Long idClient,   // obligatoire pour ADMIN ; ignoré pour un USER (son client lié est utilisé)
             @NotNull Long idVehicule,
             @NotNull LocalDate dateDebut,
             @NotNull LocalDate dateFin) {}

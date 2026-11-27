@@ -17,12 +17,13 @@ const App = {
   async init() {
     const saved = sessionStorage.getItem("autoloc_user");
 
-    if (saved) {
+    if (saved && Api.token) {
       Api.user = JSON.parse(saved);
       this.renderShell();
       return;
     }
 
+    Api.clear();
     this.login();
   },
 
@@ -575,6 +576,37 @@ const App = {
   },
 
   endpointUnavailable(element, error, path) {
+    // 401 : identifiants absents ou expirés -> retour à la connexion (et non « endpoint manquant »)
+    if (error.status === 401) {
+      Api.clear();
+      this.login("Votre session a expiré. Reconnectez-vous.");
+      return;
+    }
+
+    if (error.status === 403) {
+      element.innerHTML = `
+        <div class="card">
+          <div class="alert error">
+            <strong>Accès interdit</strong>
+            <p>Votre rôle ne permet pas de consulter cette ressource.</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    if (error.status !== 404) {
+      element.innerHTML = `
+        <div class="card">
+          <div class="alert error">
+            <strong>Chargement impossible</strong>
+            <p class="small">HTTP ${error.status || "?"} — ${error.message}</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
     element.innerHTML = `
       <div class="card">
         <div class="alert warn">

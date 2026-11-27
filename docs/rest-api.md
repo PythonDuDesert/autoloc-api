@@ -10,9 +10,9 @@ Les DTO (`web/dto/Dtos.java`) évitent d'exposer les entités JPA et leurs relat
 | | `POST /api/vehicules`, `PUT /api/vehicules/{id}`, `DELETE /api/vehicules/{id}` | ADMIN |
 | Équipements | `GET /api/equipements` | USER, ADMIN |
 | | `POST /api/equipements`, `DELETE /api/equipements/{id}` | ADMIN |
-| Réservations | `GET /api/reservations`, `GET /api/reservations/{id}` | USER, ADMIN |
-| | `POST /api/reservations`, `PUT /api/reservations/{id}` | USER, ADMIN |
-| | `PATCH /api/reservations/{id}/annuler` | USER, ADMIN |
+| Réservations | `GET /api/reservations`, `GET /api/reservations/{id}` | USER (les siennes), ADMIN (toutes) |
+| | `POST /api/reservations`, `PUT /api/reservations/{id}` | USER (pour son client), ADMIN (`idClient` requis) |
+| | `PATCH /api/reservations/{id}/annuler` | USER (les siennes), ADMIN |
 | | `PATCH /api/reservations/{id}/statut` (corps `{"statut":"CONFIRMEE"}`) | ADMIN |
 | Clients | `GET`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}` sur `/api/clients` | ADMIN |
 | Agences | `GET`, `GET /{id}`, `POST`, `PUT /{id}`, `DELETE /{id}` sur `/api/agences` | ADMIN |
@@ -26,3 +26,9 @@ Les DTO (`web/dto/Dtos.java`) évitent d'exposer les entités JPA et leurs relat
 - Refus (400) si la date de fin précède le début, ou si le début est dans le passé.
 - Un contrat ne peut être créé que pour une réservation `CONFIRMEE` sans contrat ; montant = tarif journalier × nombre de jours (minimum 1).
 - Email, numéro de permis et immatriculation sont uniques (409 sinon).
+
+## Propriété des réservations
+- Le lien compte → client est `utilisateur.client_id_client` (voir `database/link_demo_accounts.sql`).
+- Un USER ne reçoit que les réservations de son client lié ; celles d'un autre client répondent 404, comme si elles n'existaient pas.
+- Un USER qui réserve ou modifie utilise toujours son propre client : l'`idClient` envoyé est ignoré. Sans client lié, la création répond 409.
+- Un ADMIN voit tout et choisit le client.

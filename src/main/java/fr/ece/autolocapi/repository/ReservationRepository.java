@@ -20,6 +20,9 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     @EntityGraph(attributePaths = {"client", "vehicule"})
     Optional<Reservation> findById(Long id);
 
+    @EntityGraph(attributePaths = {"client", "vehicule"})
+    List<Reservation> findByClient_IdClientOrderByIdReservationDesc(Long idClient);
+
     /** Nombre de réservations actives du véhicule qui chevauchent la période [debut, fin]. */
     @Query("""
             select count(r) from Reservation r
